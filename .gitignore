@@ -1,0 +1,9 @@
+# 压缩包与解压目录不入库
+*.zip
+site/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
