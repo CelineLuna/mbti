@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MBTI 人格测试 · 30 题快速探测</title>
+<title>MBTI 人格测试 · 40 题沉浸版</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%23F5A623'/%3E%3Ccircle cx='25' cy='29' r='4' fill='%234A3A23'/%3E%3Ccircle cx='39' cy='29' r='4' fill='%234A3A23'/%3E%3Cpath d='M23 39 Q32 48 41 39' stroke='%234A3A23' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://miaoda.feishu.cn">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+KuaiLe&amp;display=swap">
@@ -35,13 +35,10 @@ body{
   font-family:var(--font-b);background:var(--bg);color:var(--ink);
   line-height:1.7;min-height:100vh;
   -webkit-font-smoothing:antialiased;
+  transition:background .5s ease;
 }
-/* 柔和装饰圆（独立层，不参与交互） */
-.deco{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
-.deco i{position:absolute;border-radius:50%;display:block}
-.deco .c1{width:180px;height:180px;background:rgba(245,166,35,.10);top:-60px;right:-40px}
-.deco .c2{width:120px;height:120px;background:rgba(255,217,138,.35);bottom:12%;left:-50px}
-.deco .c3{width:70px;height:70px;background:rgba(245,166,35,.12);top:38%;right:8%}
+/* 星空画布（动态掉落背景，独立层，不参与交互） */
+#stars{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:0}
 .app{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:30px 20px 52px;min-height:100vh}
 /* ===== 视图切换（轻量过渡） ===== */
 .view{display:none;animation:fadeUp .28s ease}
@@ -97,6 +94,7 @@ body{
 .progress{flex:1;height:12px;border-radius:999px;background:#F3E4BC;overflow:hidden}
 .progress i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-strong));transition:width .3s ease}
 .quiz-card{margin-top:6px}
+.q-type{display:inline-block;font-size:11.5px;font-weight:800;color:#fff;background:var(--accent);border-radius:999px;padding:2px 10px;margin-bottom:8px;letter-spacing:.5px}
 .q-text{font-size:19px;font-weight:800;line-height:1.6;margin-bottom:6px}
 .q-dim{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px}
 .q-options{display:flex;flex-direction:column;gap:12px}
@@ -115,12 +113,15 @@ body{
 .opt.sel{border-color:var(--accent);background:var(--accent-soft)}
 .opt.sel .mark{border-color:var(--accent-strong);background:var(--accent)}
 .opt.sel .mark::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#fff}
+/* 判断题：两个选项时略作区分 */
+.q-options.judge .opt{min-height:60px}
 .q-actions{margin-top:22px}
 .shake{animation:shake .3s ease}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 /* ===== 结果页 ===== */
 .result-head{text-align:center}
 .result-emoji{width:92px;height:92px;margin:0 auto 12px;display:block}
+.result-emoji.anime{width:112px;height:112px;filter:drop-shadow(0 8px 18px rgba(120,90,40,.18))}
 .result-type{
   font-family:var(--font-d);font-size:46px;letter-spacing:6px;line-height:1.15;color:var(--ink);
 }
@@ -154,6 +155,7 @@ body.tone-cool .btn:not(.ghost):not(.quiet){background:linear-gradient(135deg,va
 body.tone-cool .btn.ghost{background:#FFF;color:var(--cool-deep);border-color:var(--cool-soft)}
 body.tone-cool .progress i{background:linear-gradient(90deg,var(--cool),var(--cool-deep))}
 body.tone-cool .result-badge-wrap .badge{background:#D5E2F5;color:#33415E}
+body.tone-cool .q-type{background:var(--cool-deep)}
 .list-card{margin-top:16px}
 .list-card h3{font-size:15px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .list-card ul{list-style:none}
@@ -174,7 +176,7 @@ body.tone-cool .result-badge-wrap .badge{background:#D5E2F5;color:#33415E}
 </style>
 </head>
 <body>
-<div class="deco" aria-hidden="true"><i class="c1"></i><i class="c2"></i><i class="c3"></i></div>
+<canvas id="stars" aria-hidden="true"></canvas>
 <div class="app">
 
 <!-- ===== 视图：开始页 ===== -->
@@ -192,11 +194,11 @@ body.tone-cool .result-badge-wrap .badge{background:#D5E2F5;color:#33415E}
       <path d="M48 72 Q60 82 72 72" stroke="#E8890C" stroke-width="4.5" fill="none" stroke-linecap="round"/>
     </svg>
     <h1 class="start-title">MBTI 人格测试</h1>
-    <p class="start-sub">30 道生活小选择，帮你悄悄认出真实的自己</p>
+    <p class="start-sub">40 道贴近日常的小选择，帮你看清真实的自己</p>
     <div class="card start-card">
-      <div class="row"><span class="dot">30</span><span>共 30 题，均为单选</span></div>
-      <div class="row"><span class="dot">4</span><span>每题 4 个选项，选最像你的那个</span></div>
-      <div class="row"><span class="dot">?</span><span>没有对错，跟着直觉走就好</span></div>
+      <div class="row"><span class="dot">40</span><span>共 40 题，单选 + 判断混合</span></div>
+      <div class="row"><span class="dot">✦</span><span>单选选最像你的 / 判断题凭第一直觉</span></div>
+      <div class="row"><span class="dot">?</span><span>没有对错，跟着真实感受走就好</span></div>
     </div>
     <div class="start-actions">
       <button id="btn-start" type="button" class="btn">开始测试</button>
@@ -209,10 +211,11 @@ body.tone-cool .result-badge-wrap .badge{background:#D5E2F5;color:#33415E}
 <!-- ===== 视图：答题页 ===== -->
 <section id="view-quiz" class="view">
   <div class="quiz-head">
-    <div class="quiz-count" id="q-count">第 1 / 30 题</div>
+    <div class="quiz-count" id="q-count">第 1 / 40 题</div>
     <div class="progress" role="progressbar" aria-label="答题进度"><i id="q-progress"></i></div>
   </div>
   <div class="card quiz-card" id="q-card">
+    <span class="q-type" id="q-type">单选题</span>
     <p class="q-text" id="q-text"></p>
     <p class="q-dim" id="q-dim"></p>
     <div class="q-options" id="q-options"></div>
@@ -252,174 +255,275 @@ body.tone-cool .result-badge-wrap .badge{background:#D5E2F5;color:#33415E}
 
 <script>
 "use strict";
-/* ===== 题库数据（与计分逻辑分离，方便整体替换） =====
-   每题字段：
-   - dim: 对应维度（EI / SN / TF / JP），每题只对应一个维度
-   - options: 4 个选项，隐藏分值为 +2 / +1 / -1 / -2（正分指向正极字母，负分指向负极字母），界面不显示分值
-   正极：E 外向 / S 实感 / T 思考 / J 计划   负极：I 内向 / N 直觉 / F 情感 / P 随性
-   选项顺序固定写死在数据中，计分只读取每个选项的 score 字段，不靠位置猜测。 */
-const QUESTIONS = [
-  /* ========== E/I 维度 · 8 题 ========== */
-  { id:1, dim:"EI", question:"忙完一周的周五晚上，你最想怎么过？", options:[
-    { text:"拉上朋友出门，哪里热闹去哪里", score:2 },
-    { text:"约两三个好友聚一聚，聊到尽兴", score:1 },
-    { text:"窝在家里看看剧、打打游戏", score:-1 },
-    { text:"一个人安静待着，谁也别来打扰", score:-2 } ]},
-  { id:2, dim:"EI", question:"聚会里遇到一桌陌生人，你会？", options:[
-    { text:"主动凑过去聊天，很快和大家混熟", score:2 },
-    { text:"找机会加入话题，自然开口", score:1 },
-    { text:"先观察一会儿，有人搭话才接话", score:-1 },
-    { text:"尽量待在角落，希望别被注意到", score:-2 } ]},
-  { id:3, dim:"EI", question:"手机没电关机了一整天，你的第一反应是？", options:[
-    { text:"有点慌，感觉错过了全世界", score:-2 },
-    { text:"不太习惯，但还是能忍", score:-1 },
-    { text:"松了口气，清静也挺好", score:1 },
-    { text:"挺享受的，没人找我好舒服", score:2 } ]},
-  { id:4, dim:"EI", question:"碰到一个想不通的难题，你更倾向于？", options:[
-    { text:"拉人一起讨论，说着说着思路就通了", score:2 },
-    { text:"先找人聊聊，再自己慢慢消化", score:1 },
-    { text:"自己琢磨明白，实在不行再求助", score:-1 },
-    { text:"一个人安静地想，不希望被打断", score:-2 } ]},
-  { id:5, dim:"EI", question:"去旅行时，你更喜欢哪种状态？", options:[
-    { text:"认识新朋友，走到哪聊到哪", score:2 },
-    { text:"偶尔和路人搭搭话，感受当地气氛", score:1 },
-    { text:"和同行的人深度相处，不太主动社交", score:-1 },
-    { text:"自己安静地逛，享受独处的风景", score:-2 } ]},
-  { id:6, dim:"EI", question:"当众被夸奖时，你一般会觉得？", options:[
-    { text:"开心，恨不得再夸我两句", score:-2 },
-    { text:"有点害羞，但心里挺高兴", score:-1 },
-    { text:"不太自在，想赶紧把话题岔开", score:1 },
-    { text:"浑身不自在，恨不得原地消失", score:2 } ]},
-  { id:7, dim:"EI", question:"周末的社交活动排满了，你会？", options:[
-    { text:"兴奋，约得越多越开心", score:2 },
-    { text:"有点累，但还是乐意去", score:1 },
-    { text:"开始打退堂鼓，想推掉一两个", score:-1 },
-    { text:"直接拒绝，我需要独处来恢复能量", score:-2 } ]},
-  { id:8, dim:"EI", question:"跟人聊天的时候，你通常是？", options:[
-    { text:"想到什么说什么，话题源源不断", score:2 },
-    { text:"接话很顺，常是热场子的那个", score:1 },
-    { text:"话不多，聊到感兴趣的才多说几句", score:-1 },
-    { text:"主要是听，偶尔回应一两句", score:-2 } ]},
 
-  /* ========== S/N 维度 · 7 题 ========== */
-  { id:9, dim:"SN", question:"看电影或读书时，你更容易被什么吸引？", options:[
-    { text:"细节和情节，能记得很多具体内容", score:2 },
-    { text:"真实可信的部分，贴近生活", score:1 },
-    { text:"背后的寓意和隐喻，越品越深", score:-1 },
+/* ===== 动态星空背景：星星缓慢掉落 + 闪烁 + 偶发流星 ===== */
+(function starfield(){
+  const cv = document.getElementById("stars");
+  if(!cv) return;
+  const ctx = cv.getContext("2d");
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W = 0, H = 0, stars = [], meteors = [];
+
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.max(40, Math.min(150, Math.round((W * H) / 11000)));
+    stars = [];
+    for(let i = 0; i < n; i++){
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.7 + 0.5,
+        a: Math.random() * 0.55 + 0.22,
+        sp: Math.random() * 0.32 + 0.10,
+        tw: Math.random() * Math.PI * 2,
+        tws: Math.random() * 0.02 + 0.004,
+        gold: Math.random() < 0.55
+      });
+    }
+  }
+  function drawStar(s){
+    const alpha = s.a * (0.62 + 0.38 * Math.sin(s.tw));
+    ctx.beginPath();
+    ctx.fillStyle = s.gold ? "rgba(245,183,90," + alpha + ")" : "rgba(150,180,235," + alpha + ")";
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function staticFrame(){
+    ctx.clearRect(0, 0, W, H);
+    for(const s of stars) drawStar(s);
+  }
+  function loop(){
+    ctx.clearRect(0, 0, W, H);
+    for(const s of stars){
+      s.y += s.sp;
+      s.tw += s.tws;
+      if(s.y - s.r > H){ s.y = -s.r; s.x = Math.random() * W; }
+      drawStar(s);
+    }
+    if(Math.random() < 0.006){
+      meteors.push({ x: Math.random() * W, y: -10, vx: (Math.random() - 0.5) * 1.4, vy: Math.random() * 4 + 3.2, life: 1 });
+    }
+    for(let i = meteors.length - 1; i >= 0; i--){
+      const m = meteors[i];
+      m.x += m.vx; m.y += m.vy; m.life -= 0.008;
+      if(m.life <= 0 || m.y > H + 24){ meteors.splice(i, 1); continue; }
+      const g = ctx.createLinearGradient(m.x, m.y, m.x - m.vx * 9, m.y - m.vy * 9);
+      g.addColorStop(0, "rgba(255,236,170," + (0.75 * m.life) + ")");
+      g.addColorStop(1, "rgba(255,236,170,0)");
+      ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(m.x - m.vx * 9, m.y - m.vy * 9);
+      ctx.stroke();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  if(reduce){ staticFrame(); window.addEventListener("resize", staticFrame); }
+  else { loop(); }
+})();
+
+/* ===== 题库数据（40 题：30 单选 + 10 判断，四维度各 10 题，均衡分布） =====
+   每题：id（仅作标识，计分按数组下标）/ dim（EI/SN/TF/JP）/ question / judge（判断题标记）
+   options：每个选项有隐藏分值，+ 指向正极字母（E/S/T/J），- 指向负极字母（I/N/F/P）。
+   单选 4 项梯度 +2/+1/-1/-2；判断 2 项 +2/-2。界面不显示分值。 */
+const QUESTIONS = [
+  /* ========== E/I 维度（8 单选 + 2 判断） ========== */
+  { id:1, dim:"EI", question:"忙完一周到了周五晚上，你更想怎么安排？", options:[
+    { text:"叫上朋友出去走走，热闹一下才算放松", score:2 },
+    { text:"约一两个熟人小聚，聊聊天就很好", score:1 },
+    { text:"窝在家追剧打游戏，自己待着最自在", score:-1 },
+    { text:"只想安静独处，谁也别来打扰我", score:-2 } ]},
+  { id:2, dim:"EI", question:"到了一个全新环境（新班级、新公司），你通常？", options:[
+    { text:"主动和周围人打招呼，很快熟络起来", score:2 },
+    { text:"先和坐得近的人聊聊，慢慢融入", score:1 },
+    { text:"等别人先开口，我再顺势接话", score:-1 },
+    { text:"尽量少说话，先自己安静观察一阵", score:-2 } ]},
+  { id:3, dim:"EI", judge:true, question:"在人多的场合，我通常越聊越有精神，一个人待久了反而有点闷。", options:[
+    { text:"符合我", score:2 },
+    { text:"不太符合", score:-2 } ]},
+  { id:4, dim:"EI", question:"手机没电、一整天联系不上外界，你会？", options:[
+    { text:"挺不习惯，总担心错过什么要紧事", score:2 },
+    { text:"有点惦记，但还能忍一忍", score:1 },
+    { text:"正好清静，感觉挺放松", score:-1 },
+    { text:"太舒服了，希望天天这样", score:-2 } ]},
+  { id:5, dim:"EI", question:"遇到一道想不通的难题，你更可能？", options:[
+    { text:"找人一起讨论，说着说着就有思路了", score:2 },
+    { text:"先跟人聊聊，再自己慢慢消化", score:1 },
+    { text:"自己先琢磨，实在卡住再找人问", score:-1 },
+    { text:"一个人慢慢想，不想被打断", score:-2 } ]},
+  { id:6, dim:"EI", question:"连续社交一整天后，你通常觉得？", options:[
+    { text:"越聊越有劲，还想接着玩", score:2 },
+    { text:"挺充实，回去也还挺兴奋", score:1 },
+    { text:"有点疲惫，想自己静静", score:-1 },
+    { text:"电量耗尽，需要独处好好充个电", score:-2 } ]},
+  { id:7, dim:"EI", judge:true, question:"比起热闹的聚会，我更享受一个人安安静静地待着。", options:[
+    { text:"符合我", score:-2 },
+    { text:"不太符合", score:2 } ]},
+  { id:8, dim:"EI", question:"需要做决定时，你更倾向于？", options:[
+    { text:"边和别人聊边想，说出来更清楚", score:2 },
+    { text:"先听听大家的意见再定", score:1 },
+    { text:"自己先想清楚，再参考建议", score:-1 },
+    { text:"独自想明白，不喜欢被打扰", score:-2 } ]},
+  { id:9, dim:"EI", question:"被当众夸奖时，你一般会？", options:[
+    { text:"挺享受，开心得想多聊几句", score:2 },
+    { text:"有点不好意思，但心里挺美", score:1 },
+    { text:"不太自在，想赶紧换个话题", score:-1 },
+    { text:"浑身别扭，恨不得找地缝钻进去", score:-2 } ]},
+  { id:10, dim:"EI", question:"朋友临时组了个局叫你去，你可能？", options:[
+    { text:"正好想热闹，立刻响应", score:2 },
+    { text:"看心情，想去就去", score:1 },
+    { text:"找个理由婉拒，想在家待着", score:-1 },
+    { text:"直接说不去，我更想自己待着", score:-2 } ]},
+
+  /* ========== S/N 维度（7 单选 + 3 判断） ========== */
+  { id:11, dim:"SN", question:"看电影或看书时，最吸引你的是？", options:[
+    { text:"具体的情节和细节，能记住很多画面", score:2 },
+    { text:"真实可信、贴近生活的部分", score:1 },
+    { text:"背后的寓意和隐喻，越品越有味道", score:-1 },
     { text:"天马行空的设定，忍不住脑补各种可能", score:-2 } ]},
-  { id:10, dim:"SN", question:"接手一件新任务，你先想到的是？", options:[
-    { text:"具体步骤和操作，先把流程捋清楚", score:2 },
-    { text:"现实条件有哪些，怎么落地", score:1 },
-    { text:"它未来的方向和各种可能性", score:-1 },
-    { text:"它能不能改变点什么，先看整体图景", score:-2 } ]},
-  { id:11, dim:"SN", question:"听到“未来十年”这个词，你脑海里出现的是？", options:[
-    { text:"眼下生活的具体样子，按部就班地展开", score:-2 },
-    { text:"现实趋势，一步步推演下去", score:-1 },
-    { text:"各种大胆的想象和猜测", score:1 },
-    { text:"一幅完整的未来画面，像电影一样", score:2 } ]},
-  { id:12, dim:"SN", question:"你更容易记住的是？", options:[
+  { id:12, dim:"SN", judge:true, question:"做事时，我更相信亲眼所见、亲身验证过的经验。", options:[
+    { text:"符合我", score:2 },
+    { text:"不太符合", score:-2 } ]},
+  { id:13, dim:"SN", question:"接手一件新任务，你首先想到的是？", options:[
+    { text:"具体步骤和流程，先把框架搭好", score:2 },
+    { text:"现有条件有哪些，怎么落地", score:1 },
+    { text:"这件事未来能往哪个方向走", score:-1 },
+    { text:"它能带来什么新的可能性", score:-2 } ]},
+  { id:14, dim:"SN", question:"你更容易记住的是？", options:[
     { text:"具体的事实、名字和数字", score:2 },
     { text:"亲眼见过的场景和亲身经历", score:1 },
     { text:"灵光一闪的念头和预感", score:-1 },
     { text:"自己幻想过的画面和构思", score:-2 } ]},
-  { id:13, dim:"SN", question:"做事的时候，你习惯？", options:[
-    { text:"按照经验来，稳妥第一", score:2 },
+  { id:15, dim:"SN", judge:true, question:"我常会为一个还没发生、甚至不太现实的设想兴奋半天。", options:[
+    { text:"符合我", score:-2 },
+    { text:"不太符合", score:2 } ]},
+  { id:16, dim:"SN", question:"做事的时候，你更惯常的方式是？", options:[
+    { text:"照着经验来，稳妥第一", score:2 },
     { text:"参考实际数据，一步步来", score:1 },
-    { text:"凭直觉走，有新点子就调整", score:-1 },
-    { text:"跟随灵感，随时冒出新的思路", score:-2 } ]},
-  { id:14, dim:"SN", question:"面对一个抽象的概念，你怎么理解它？", options:[
-    { text:"得落到具体例子上，不然记不住", score:-2 },
-    { text:"联系实际生活，套进真实场景去想", score:-1 },
-    { text:"喜欢顺着它联想，越扯越远", score:1 },
-    { text:"直接在各种可能性之间跳来跳去", score:2 } ]},
-  { id:15, dim:"SN", question:"旅行前做攻略，你更关心？", options:[
-    { text:"具体路线、时间和花费", score:2 },
-    { text:"吃住行的实际情况，实用信息", score:1 },
-    { text:"目的地带来的感觉和氛围", score:-1 },
-    { text:"这次旅行能带来什么新的体验和启发", score:-2 } ]},
+    { text:"跟着直觉走，边走边调整", score:-1 },
+    { text:"凭灵感来，随时冒出新的思路", score:-2 } ]},
+  { id:17, dim:"SN", question:"听到一个很抽象的概念，你会怎么理解它？", options:[
+    { text:"必须落到具体例子上，不然记不住", score:2 },
+    { text:"联系实际生活，套进真实场景去想", score:1 },
+    { text:"顺着它使劲联想，越想越远", score:-1 },
+    { text:"在各种可能性之间来回跳跃", score:-2 } ]},
+  { id:18, dim:"SN", judge:true, question:"比起大方向上的可能性，我更在意眼前具体怎么做才不出错。", options:[
+    { text:"符合我", score:2 },
+    { text:"不太符合", score:-2 } ]},
+  { id:19, dim:"SN", question:"出门旅行前做攻略，你更看重？", options:[
+    { text:"具体的路线、时间和花费", score:2 },
+    { text:"吃住行的实用信息", score:1 },
+    { text:"目的地给人的感觉和氛围", score:-1 },
+    { text:"这趟旅程能带来哪些新体验和启发", score:-2 } ]},
+  { id:20, dim:"SN", question:"面对“未来十年”这样的设想，你脑海里浮现的是？", options:[
+    { text:"眼下生活的具体模样，一天天往下过", score:2 },
+    { text:"根据现实趋势一步步推演", score:1 },
+    { text:"一些大胆的猜测和想象", score:-1 },
+    { text:"一幅完整的未来画面，像电影一样", score:-2 } ]},
 
-  /* ========== T/F 维度 · 8 题 ========== */
-  { id:16, dim:"TF", question:"朋友向你倾诉烦恼，你的第一反应是？", options:[
-    { text:"分析问题出在哪，直接给出解决办法", score:2 },
-    { text:"帮他梳理逻辑，一起找找原因", score:1 },
-    { text:"先安慰他的情绪，陪着他", score:-1 },
-    { text:"完全代入他的感受，跟着一起心疼", score:-2 } ]},
-  { id:17, dim:"TF", question:"做决定的时候，你更看重？", options:[
-    { text:"道理和利弊，怎么划算怎么来", score:2 },
+  /* ========== T/F 维度（8 单选 + 2 判断） ========== */
+  { id:21, dim:"TF", question:"朋友向你倾诉烦恼，你的第一反应通常是？", options:[
+    { text:"先分析问题出在哪，给点实际建议", score:2 },
+    { text:"帮他理理逻辑，一起找找原因", score:1 },
+    { text:"先安慰安慰他的情绪，陪着他", score:-1 },
+    { text:"完全代入他的感受，跟着一起难过", score:-2 } ]},
+  { id:22, dim:"TF", question:"做决定时，你更看重？", options:[
+    { text:"道理和利弊，怎么更划算", score:2 },
     { text:"客观事实，判断对不对", score:1 },
     { text:"大家的感受，会不会伤到人", score:-1 },
-    { text:"心里的感觉，自己舒服最重要", score:-2 } ]},
-  { id:18, dim:"TF", question:"有人和你意见不合时，你会？", options:[
-    { text:"摆事实讲道理，直到把话说清", score:-2 },
-    { text:"冷静辩论，就事论事", score:-1 },
-    { text:"尽量避免冲突，找个台阶下", score:1 },
-    { text:"情绪先上来，觉得对方不理解我", score:2 } ]},
-  { id:19, dim:"TF", question:"评价一部作品时，你更在意？", options:[
+    { text:"自己心里舒不舒服", score:-2 } ]},
+  { id:23, dim:"TF", judge:true, question:"朋友来问我意见时，我通常会直说好坏，哪怕话不太好听。", options:[
+    { text:"符合我", score:2 },
+    { text:"不太符合", score:-2 } ]},
+  { id:24, dim:"TF", question:"有人和你意见不合时，你更可能？", options:[
+    { text:"摆事实讲道理，直到把话说清楚", score:2 },
+    { text:"冷静地就事论事地讨论", score:1 },
+    { text:"尽量别起冲突，找个台阶下", score:-1 },
+    { text:"先被情绪带着走，觉得对方不理解我", score:-2 } ]},
+  { id:25, dim:"TF", question:"评价一部作品时，你更在意？", options:[
     { text:"逻辑通不通，结构好不好", score:2 },
     { text:"有没有硬伤，经不经得起推敲", score:1 },
     { text:"有没有打动我，情感真不真", score:-1 },
-    { text:"角色的感受和命运，看得揪心", score:-2 } ]},
-  { id:20, dim:"TF", question:"团队里有人拖了后腿，你会？", options:[
-    { text:"直接指出问题，推动改进", score:2 },
-    { text:"客观评估影响，再谈怎么处理", score:1 },
+    { text:"里面人物的感受和命运，看得揪心", score:-2 } ]},
+  { id:26, dim:"TF", question:"团队里有人拖了进度，你会？", options:[
+    { text:"直接点出问题，推动他改进", score:2 },
+    { text:"先评估影响，再谈怎么处理", score:1 },
     { text:"先理解他的难处，再想办法帮忙", score:-1 },
     { text:"替他着急，又怕说重了伤感情", score:-2 } ]},
-  { id:21, dim:"TF", question:"被批评的时候，你首先会？", options:[
-    { text:"看他说的有没有道理，对的就改", score:2 },
+  { id:27, dim:"TF", judge:true, question:"别人难过时，我很容易被他的情绪带动，很难冷静旁观。", options:[
+    { text:"符合我", score:-2 },
+    { text:"不太符合", score:2 } ]},
+  { id:28, dim:"TF", question:"被批评的时候，你首先会？", options:[
+    { text:"看他讲的有没有道理，对的就改", score:2 },
     { text:"先分析事实，再决定接不接受", score:1 },
-    { text:"心里有点难受，先处理自己的情绪", score:-1 },
-    { text:"觉得很受伤，需要缓一缓", score:-2 } ]},
-  { id:22, dim:"TF", question:"挑礼物送人，你更倾向？", options:[
-    { text:"实用、预算合适，直接好用", score:-2 },
-    { text:"精心对比参数和评价再下单", score:-1 },
-    { text:"用心挑选，能表达我的心意", score:1 },
-    { text:"按对方的喜好和近况选，要暖到心坎里", score:2 } ]},
-  { id:23, dim:"TF", question:"面对一个两难选择，你最后会？", options:[
+    { text:"心里有点难受，先缓缓情绪", score:-1 },
+    { text:"觉得很受伤，需要缓很久", score:-2 } ]},
+  { id:29, dim:"TF", question:"给朋友挑礼物，你更倾向？", options:[
+    { text:"实用、预算合适、直接好用", score:2 },
+    { text:"对比参数和评价再下单", score:1 },
+    { text:"用心挑，能表达我的心意", score:-1 },
+    { text:"按对方的喜好和近况，要暖到心坎里", score:-2 } ]},
+  { id:30, dim:"TF", question:"面对一个两难选择，你最后会？", options:[
     { text:"权衡得失，选最合理的那个", score:2 },
-    { text:"列清楚利弊，按逻辑来定", score:1 },
-    { text:"问问身边人的感受，综合一下", score:-1 },
+    { text:"列清单理利弊，按逻辑来定", score:1 },
+    { text:"问问身边人的感受，再综合一下", score:-1 },
     { text:"听心里的声音，选让自己安心的", score:-2 } ]},
 
-  /* ========== J/P 维度 · 7 题 ========== */
-  { id:24, dim:"JP", question:"出发旅行之前，你会？", options:[
-    { text:"提前订好一切，行程精确到小时", score:2 },
-    { text:"做好大体安排，列个清单", score:1 },
+  /* ========== J/P 维度（7 单选 + 3 判断） ========== */
+  { id:31, dim:"JP", question:"出发旅行之前，你更可能？", options:[
+    { text:"提前把行程订好，安排得清清楚楚", score:2 },
+    { text:"列个大概的清单，心里有数", score:1 },
     { text:"订个大概，剩下随机应变", score:-1 },
-    { text:"说走就走，到地方再说", score:-2 } ]},
-  { id:25, dim:"JP", question:"你的桌面或房间通常是？", options:[
-    { text:"井井有条，每样东西有固定位置", score:-2 },
-    { text:"定期整理，大部分时候挺整齐", score:-1 },
-    { text:"有点乱，但自己总能找到东西", score:1 },
-    { text:"随性堆放，乱中有序", score:2 } ]},
-  { id:26, dim:"JP", question:"截止日期临近，你一般是？", options:[
-    { text:"早就完成大半，从容收尾", score:2 },
-    { text:"提前规划好时间，稳步推进", score:1 },
-    { text:"最后几天集中突击，效率爆棚", score:-1 },
-    { text:"卡着最后一刻交，心跳加速", score:-2 } ]},
-  { id:27, dim:"JP", question:"列计划表这件事，你？", options:[
-    { text:"必须列，不打勾不痛快", score:2 },
+    { text:"说走就走，到了地方再说", score:-2 } ]},
+  { id:32, dim:"JP", judge:true, question:"我出门或做事前，习惯先把计划安排清楚才安心。", options:[
+    { text:"符合我", score:2 },
+    { text:"不太符合", score:-2 } ]},
+  { id:33, dim:"JP", question:"你的桌面或房间通常是？", options:[
+    { text:"井井有条，每样东西都有固定位置", score:2 },
+    { text:"定期收拾，大多时候挺整齐", score:1 },
+    { text:"有点乱，但自己总能找到东西", score:-1 },
+    { text:"随性堆放，乱了也无所谓", score:-2 } ]},
+  { id:34, dim:"JP", question:"截止日期快到了，你一般？", options:[
+    { text:"早就做得差不多，从容收尾", score:2 },
+    { text:"按计划稳步推进，不慌", score:1 },
+    { text:"最后几天集中火力赶出来", score:-1 },
+    { text:"卡着最后一刻交，越赶越有劲", score:-2 } ]},
+  { id:35, dim:"JP", judge:true, question:"我的计划常常是临时起意，很多事拖到最后一刻才定。", options:[
+    { text:"符合我", score:-2 },
+    { text:"不太符合", score:2 } ]},
+  { id:36, dim:"JP", question:"说到列计划这件事，你？", options:[
+    { text:"必须列，一条条打勾才安心", score:2 },
     { text:"喜欢列，虽然偶尔没执行", score:1 },
-    { text:"列过几次，基本都吃灰", score:-1 },
-    { text:"从来不列，计划赶不上变化", score:-2 } ]},
-  { id:28, dim:"JP", question:"朋友临时约你出去，你通常？", options:[
-    { text:"要看安排，没提前约一般不答应", score:-2 },
-    { text:"先看日程，有空就去", score:-1 },
-    { text:"基本都能去，随时待命", score:1 },
-    { text:"说走就走，立刻收拾出门", score:2 } ]},
-  { id:29, dim:"JP", question:"“按部就班”和“自由发挥”，你更偏向？", options:[
-    { text:"按部就班，省心又踏实", score:2 },
-    { text:"有个框架兜底，心里有底", score:1 },
-    { text:"自由发挥，走一步看一步", score:-1 },
-    { text:"讨厌被框住，越随性越来劲", score:-2 } ]},
-  { id:30, dim:"JP", question:"一周刚开始的时候，你通常是？", options:[
-    { text:"已经想好这一周要干什么", score:2 },
-    { text:"大概有数，重要的事先记下来", score:1 },
-    { text:"走到哪算哪，有事再说", score:-1 },
-    { text:"完全没安排，每天醒来再定", score:-2 } ]}
+    { text:"列过几次，基本都放弃了", score:-1 },
+    { text:"从不列，计划赶不上变化", score:-2 } ]},
+  { id:37, dim:"JP", question:"朋友临时约你出门，你通常？", options:[
+    { text:"没提前约，我一般不答应", score:2 },
+    { text:"先看看今天有没有安排", score:1 },
+    { text:"有空基本都会去", score:-1 },
+    { text:"说走就走，立刻收拾出门", score:-2 } ]},
+  { id:38, dim:"JP", question:"做事时，你更喜欢？", options:[
+    { text:"先定好步骤，按部就班推进", score:2 },
+    { text:"有个大致框架，心里有底", score:1 },
+    { text:"边走边看，随时调整", score:-1 },
+    { text:"完全随心，讨厌被框住", score:-2 } ]},
+  { id:39, dim:"JP", judge:true, question:"东西用完放回原处、待办一件件完成，会让我特别踏实。", options:[
+    { text:"符合我", score:2 },
+    { text:"不太符合", score:-2 } ]},
+  { id:40, dim:"JP", question:"新的一周刚开始时，你通常？", options:[
+    { text:"已经想好这周要做哪些事", score:2 },
+    { text:"心里大概有数，重要的事记下来", score:1 },
+    { text:"走一步看一步，有事再说", score:-1 },
+    { text:"完全不安排，每天醒了再定", score:-2 } ]}
 ];
 
-/* ===== 16 型结果文案（本地静态数据，不依赖网络） =====
-   每型字段：name 类型名 / keywords 关键词 / desc 描述 / strengths 优势 2 条 / cautions 注意点 2 条 */
+/* ===== 16 型结果文案（本地静态数据，不依赖网络） ===== */
 const TYPE_INFO = {
   "ISTJ":{ name:"物流师", keywords:["务实","可靠","有条理","责任感"],
     desc:"你是可靠又务实的执行者，习惯把生活打理得井井有条。你相信经验和事实，喜欢按计划一步步把事做成，承诺过的事一定办到。安静的外表下藏着极强的责任感，是团队里最让人放心的那一个。",
@@ -487,21 +591,118 @@ const TYPE_INFO = {
     cautions:["容易忽略他人感受","对慢节奏的人不耐烦"] }
 };
 
+/* ===== 16 型动漫头像配置（差异化人物形象，纯内联 SVG） =====
+   style: 0 短发 / 1 长发 / 2 单侧马尾 / 3 刺猬短发；mouth: 0 微笑 / 1 大笑 / 2 抿嘴 / 3 坏笑；acc: 0 无 / 1 眼镜 / 2 发夹 / 3 星光 */
+const AVATAR = {
+  "ISTJ":{hair:"#6B5E4C",hair2:"#4E4436",eye:"#6E8F5B",bg1:"#EFF4EA",bg2:"#D6E2CE",cloth:"#5E6B7C",style:0,mouth:2,acc:1},
+  "ISFJ":{hair:"#8C6B4C",hair2:"#6E5238",eye:"#B08A5E",bg1:"#FBF0E6",bg2:"#F2DCC6",cloth:"#C69A78",style:1,mouth:0,acc:2},
+  "INFJ":{hair:"#414C6B",hair2:"#2E3650",eye:"#6C7FB8",bg1:"#EAEFFB",bg2:"#D5DDF4",cloth:"#7C86A8",style:1,mouth:0,acc:3},
+  "INTJ":{hair:"#333B4A",hair2:"#232937",eye:"#4A6FA5",bg1:"#E7ECF6",bg2:"#D1DAEC",cloth:"#3E4759",style:0,mouth:3,acc:1},
+  "ISTP":{hair:"#4C4C4C",hair2:"#343434",eye:"#8A909A",bg1:"#EDEEEF",bg2:"#D8DADD",cloth:"#586270",style:3,mouth:3,acc:0},
+  "ISFP":{hair:"#C87D4B",hair2:"#A5613A",eye:"#6FA36B",bg1:"#FCEFE3",bg2:"#F4DCCB",cloth:"#D8A279",style:1,mouth:0,acc:2},
+  "INFP":{hair:"#9B7BC0",hair2:"#7C5CA6",eye:"#8B6FC0",bg1:"#F1ECFB",bg2:"#E2D7F5",cloth:"#B49BD6",style:1,mouth:0,acc:3},
+  "INTP":{hair:"#4B5A78",hair2:"#364260",eye:"#5B79B8",bg1:"#EDF1FA",bg2:"#D8E1F2",cloth:"#546075",style:3,mouth:2,acc:1},
+  "ESTP":{hair:"#7A4B2A",hair2:"#5C3820",eye:"#C9822B",bg1:"#FCEFDF",bg2:"#F5D8BC",cloth:"#C86A3A",style:3,mouth:1,acc:0},
+  "ESFP":{hair:"#E08A3C",hair2:"#BE6C25",eye:"#D98A3A",bg1:"#FFF0DB",bg2:"#FFDFB5",cloth:"#F0A54A",style:2,mouth:1,acc:2},
+  "ENFP":{hair:"#E5A94E",hair2:"#C98C34",eye:"#C98C3A",bg1:"#FFF3D6",bg2:"#FFE6AC",cloth:"#E8B458",style:2,mouth:1,acc:3},
+  "ENTP":{hair:"#6E5A8F",hair2:"#54426F",eye:"#7A5CA8",bg1:"#F1ECFA",bg2:"#DFD5F2",cloth:"#7A6AA0",style:3,mouth:3,acc:0},
+  "ESTJ":{hair:"#3C3C3C",hair2:"#282828",eye:"#7A5A3A",bg1:"#F3ECDE",bg2:"#E5D7BD",cloth:"#484850",style:0,mouth:2,acc:1},
+  "ESFJ":{hair:"#B5603A",hair2:"#94482A",eye:"#C77A4A",bg1:"#FBEDE6",bg2:"#F3D9CD",cloth:"#CE7A5A",style:2,mouth:0,acc:2},
+  "ENFJ":{hair:"#8B5A3C",hair2:"#6E4530",eye:"#B5794A",bg1:"#FBEEDF",bg2:"#F2DAC3",cloth:"#C88A5E",style:1,mouth:0,acc:3},
+  "ENTJ":{hair:"#353C4C",hair2:"#242A38",eye:"#4A5A7A",bg1:"#E9EDF4",bg2:"#D5DBE7",cloth:"#3A4250",style:0,mouth:3,acc:1}
+};
+
+/* 生成某个类型的动漫头像 SVG */
+function avatarSVG(type){
+  const c = AVATAR[type] || AVATAR.INTJ;
+  const id = "av" + type;
+  const skin = "#FFDFC6", skin2 = "#F1C3A1";
+  const grad = `<defs>
+    <radialGradient id="bg-${id}" cx="50%" cy="40%" r="72%"><stop offset="0" stop-color="${c.bg1}"/><stop offset="1" stop-color="${c.bg2}"/></radialGradient>
+    <linearGradient id="h-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.hair}"/><stop offset="1" stop-color="${c.hair2}"/></linearGradient>
+  </defs>`;
+  const sparkles = c.acc === 3
+    ? `<g fill="#FFF4C2" opacity=".95"><path d="M27 30 l1.6 4.4 4.4 1.6 -4.4 1.6 -1.6 4.4 -1.6 -4.4 -4.4 -1.6 4.4 -1.6 Z"/><path d="M94 40 l1.2 3.2 3.2 1.2 -3.2 1.2 -1.2 3.2 -1.2 -3.2 -3.2 -1.2 3.2 -1.2 Z"/></g>`
+    : "";
+  let back = "";
+  if(c.style === 0){ back = `<ellipse cx="60" cy="56" rx="31" ry="31" fill="url(#h-${id})"/>`; }
+  else if(c.style === 1){ back = `<path d="M27 60 Q25 30 60 29 Q95 30 93 60 L95 114 Q60 106 25 114 Z" fill="url(#h-${id})"/>`; }
+  else if(c.style === 2){ back = `<ellipse cx="60" cy="56" rx="31" ry="31" fill="url(#h-${id})"/><path d="M86 50 Q104 66 95 98 Q90 110 81 103 Q91 78 82 60 Z" fill="url(#h-${id})"/>`; }
+  else { back = `<path d="M30 58 L35 29 L45 46 L51 25 L60 44 L69 24 L77 46 L86 30 L90 58 Q60 40 30 58 Z" fill="url(#h-${id})"/>`; }
+  const bangs = `<path d="M31 55 Q33 33 60 32 Q87 33 89 55 Q82 45 70 47 Q64 41 60 47 Q56 41 50 47 Q38 45 31 55 Z" fill="url(#h-${id})"/>`;
+  const side = `<path d="M31 54 Q28 70 33 84 Q36 70 37 58 Z" fill="url(#h-${id})"/><path d="M89 54 Q92 70 87 84 Q84 70 83 58 Z" fill="url(#h-${id})"/>`;
+  const eye = (cx) => `<g>
+      <ellipse cx="${cx}" cy="63" rx="6.4" ry="7.4" fill="#fff"/>
+      <circle cx="${cx}" cy="63.6" r="4.7" fill="${c.eye}"/>
+      <circle cx="${cx}" cy="64.4" r="2.3" fill="#2b2433"/>
+      <circle cx="${cx-1.7}" cy="61" r="1.6" fill="#fff"/>
+      <circle cx="${cx+1.9}" cy="66" r="0.9" fill="#fff" opacity=".85"/>
+      <path d="M${cx-6.6} 61 Q${cx} 56.4 ${cx+6.6} 61" stroke="#3a2f3f" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    </g>`;
+  const brows = `<path d="M41.5 52.5 Q47 49.6 53 52.5" stroke="${c.hair2}" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M67 52.5 Q73 49.6 78.5 52.5" stroke="${c.hair2}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  const blush = `<ellipse cx="42" cy="73.5" rx="4.2" ry="2.6" fill="#FF9FB2" opacity=".55"/><ellipse cx="78" cy="73.5" rx="4.2" ry="2.6" fill="#FF9FB2" opacity=".55"/>`;
+  const nose = `<path d="M60 67.5 l-2 3.2 3.4 0" stroke="${skin2}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const mouths = [
+    `<path d="M54 79 Q60 85 66 79" stroke="#C0566A" stroke-width="2.4" fill="none" stroke-linecap="round"/>`,
+    `<path d="M52 77.5 Q60 88 68 77.5 Q60 83.5 52 77.5 Z" fill="#C0566A"/>`,
+    `<path d="M56 80 Q60 83 64 80" stroke="#C0566A" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+    `<path d="M55 80.5 Q60 84 66 78.5" stroke="#C0566A" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+  ];
+  const mouth = mouths[c.mouth] || mouths[0];
+  let acc = "";
+  if(c.acc === 1){ acc = `<g fill="none" stroke="#3A3F4A" stroke-width="2"><rect x="39.5" y="56.5" width="16" height="13" rx="4.5"/><rect x="64.5" y="56.5" width="16" height="13" rx="4.5"/><line x1="55.5" y1="63" x2="64.5" y2="63"/></g>`; }
+  else if(c.acc === 2){ acc = `<path d="M74 37 l2.4 1.8 2.8-1 0.2 3 2.4 1.8 -2.7 1.2 0.1 3 -2.6-1.5 -2.6 1.5 0.1-3 -2.7-1.2 2.4-1.8 0.2-3 Z" fill="#FFD25E" stroke="#E8A93A" stroke-width=".8"/>`; }
+
+  return `<svg class="result-emoji anime" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type} 动漫形象">
+    ${grad}
+    <circle cx="60" cy="60" r="58" fill="url(#bg-${id})"/>
+    <circle cx="60" cy="60" r="58" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="3"/>
+    ${sparkles}
+    ${back}
+    <path d="M24 118 Q60 92 96 118 Z" fill="${c.cloth}"/>
+    <path d="M52 98 Q60 107 68 98" stroke="#ffffff" stroke-width="2.2" fill="none" opacity=".5"/>
+    <rect x="54" y="82" width="12" height="13" rx="5" fill="${skin2}"/>
+    <ellipse cx="34" cy="64" rx="4.2" ry="6.2" fill="${skin}"/>
+    <ellipse cx="86" cy="64" rx="4.2" ry="6.2" fill="${skin}"/>
+    <ellipse cx="60" cy="62" rx="26" ry="27" fill="${skin}"/>
+    ${bangs}
+    ${side}
+    ${eye(47)}${eye(73)}
+    ${brows}
+    ${blush}
+    ${nose}
+    ${mouth}
+    ${acc}
+  </svg>`;
+}
+
 /* ===== 计分规则（可解释） =====
    1. 每个维度累计该维度全部题目的隐藏分值；
    2. 某维度总分 > 0 取正极字母，< 0 取负极字母；
    3. 总分 == 0 使用固定兜底：EI→I，SN→N，TF→F，JP→P，结果页该维度标注「接近平衡」；
-   4. 四维倾向比例：p = (score + maxAbs) / (2 * maxAbs) * 100，p>50 偏向正极，p<50 偏向负极。 */
+   4. 四维倾向比例：p = (score + maxAbs) / (2 * maxAbs) * 100，maxAbs 为该维度满分（动态计算）。 */
 const DIMS = [
-  { key:"EI", pos:"E", neg:"I", fallback:"I", maxAbs:16, posName:"外向", negName:"内向" },
-  { key:"SN", pos:"S", neg:"N", fallback:"N", maxAbs:14, posName:"实感", negName:"直觉" },
-  { key:"TF", pos:"T", neg:"F", fallback:"F", maxAbs:16, posName:"思考", negName:"情感" },
-  { key:"JP", pos:"J", neg:"P", fallback:"P", maxAbs:14, posName:"计划", negName:"随性" }
+  { key:"EI", pos:"E", neg:"I", fallback:"I", posName:"外向", negName:"内向" },
+  { key:"SN", pos:"S", neg:"N", fallback:"N", posName:"实感", negName:"直觉" },
+  { key:"TF", pos:"T", neg:"F", fallback:"F", posName:"思考", negName:"情感" },
+  { key:"JP", pos:"J", neg:"P", fallback:"P", posName:"计划", negName:"随性" }
 ];
 const TOTAL = QUESTIONS.length;
 
+/* 某维度满分（该维度每题最大绝对分值之和） */
+function dimMaxAbs(dim){
+  let sum = 0;
+  for(const q of QUESTIONS){
+    if(q.dim !== dim) continue;
+    let m = 0;
+    for(const o of q.options){ if(Math.abs(o.score) > m) m = Math.abs(o.score); }
+    sum += m;
+  }
+  return sum || 1;
+}
+
 /* ===== 状态与本地持久化（刷新尽量恢复进度） ===== */
-const STORE_KEY = "mbti_progress_v1";
+const STORE_KEY = "mbti_progress_v2";
 let state = { answers:new Array(TOTAL).fill(-1), current:0 };
 function saveState(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 function loadState(){
@@ -563,9 +764,11 @@ function renderQuiz(){
   const done = answeredCount();
   $("q-count").textContent = "第 " + (state.current+1) + " / " + TOTAL + " 题";
   $("q-progress").style.width = (done / TOTAL * 100) + "%";
+  $("q-type").textContent = q.judge ? "判断题" : "单选题";
   $("q-text").textContent = q.question;
-  $("q-dim").textContent = "题目 " + (state.current+1) + " · 单选";
+  $("q-dim").textContent = "第 " + (state.current+1) + " 题 · " + (q.judge ? "请判断是否符合你" : "选最像你的那个");
   const wrap = $("q-options");
+  wrap.className = "q-options" + (q.judge ? " judge" : "");
   wrap.innerHTML = "";
   q.options.forEach((opt, i) => {
     const b = document.createElement("button");
@@ -590,7 +793,7 @@ function next(){
   if(state.answers[state.current] === -1){
     toast("请先选择一个选项再继续");
     $("q-card").classList.remove("shake");
-    void $("q-card").offsetWidth; /* 重新触发动画 */
+    void $("q-card").offsetWidth;
     $("q-card").classList.add("shake");
     return;
   }
@@ -613,28 +816,27 @@ $("btn-prev").addEventListener("click", prev);
 /* ===== 结果页 ===== */
 function calcScores(){
   const scores = { EI:0, SN:0, TF:0, JP:0 };
-  QUESTIONS.forEach(q => {
-    const pickIdx = state.answers[q.id - 1];
-    if(pickIdx >= 0) scores[q.dim] += q.options[pickIdx].score;
+  QUESTIONS.forEach((q, idx) => {
+    const pickIdx = state.answers[idx];
+    if(pickIdx >= 0 && q.options[pickIdx]) scores[q.dim] += q.options[pickIdx].score;
   });
   return scores;
 }
-const SUN_SVG = '<svg class="result-emoji" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="44" fill="#FFD98A"/><g stroke="#E8890C" stroke-width="6" stroke-linecap="round"><line x1="60" y1="6" x2="60" y2="20"/><line x1="60" y1="100" x2="60" y2="114"/><line x1="6" y1="60" x2="20" y2="60"/><line x1="100" y1="60" x2="114" y2="60"/><line x1="22" y1="22" x2="32" y2="32"/><line x1="88" y1="88" x2="98" y2="98"/><line x1="98" y1="22" x2="88" y2="32"/><line x1="32" y1="88" x2="22" y2="98"/></g><circle cx="52" cy="56" r="5" fill="#E8890C"/><circle cx="68" cy="56" r="5" fill="#E8890C"/><path d="M48 72 Q60 82 72 72" stroke="#E8890C" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg>';
-const MOON_SVG = '<svg class="result-emoji" viewBox="0 0 120 120" aria-hidden="true"><path d="M66 10 A44 44 0 1 0 110 58 A48 48 0 0 1 66 10Z" fill="#B9C9EC"/><g fill="#8FA8D8"><circle cx="30" cy="34" r="4"/><circle cx="24" cy="66" r="3"/><circle cx="44" cy="82" r="3.5"/><circle cx="86" cy="30" r="3"/></g><circle cx="62" cy="64" r="5" fill="#5B79B8"/><circle cx="76" cy="64" r="5" fill="#5B79B8"/><path d="M58 80 Q69 89 80 80" stroke="#5B79B8" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg>';
 function showResult(){
   const scores = calcScores();
   const letters = {}, percents = {}, balanced = {};
   DIMS.forEach(d => {
     const s = scores[d.key];
     letters[d.key] = s > 0 ? d.pos : (s < 0 ? d.neg : d.fallback);
-    percents[d.key] = Math.round((s + d.maxAbs) / (2 * d.maxAbs) * 100);
+    const ma = dimMaxAbs(d.key);
+    percents[d.key] = Math.round((s + ma) / (2 * ma) * 100);
     balanced[d.key] = (s === 0);
   });
   const type = DIMS.map(d => letters[d.key]).join("");
   const info = TYPE_INFO[type];
   document.body.className = (type.charAt(0) === "E") ? "tone-warm" : "tone-cool";
   setViews("view-result");
-  $("r-emoji").innerHTML = (type.charAt(0) === "E") ? SUN_SVG : MOON_SVG;
+  $("r-emoji").innerHTML = avatarSVG(type);
   $("r-type").textContent = type;
   $("r-name").textContent = info.name;
   $("r-keywords").innerHTML = info.keywords.map(k => '<span class="badge">' + k + "</span>").join("");
